@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Procurações e-CAC & Situação Fiscal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            800: '#0c4a6e',
+                            900: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-800/80 backdrop-blur-md border-b border-slate-700/60 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-brand-600/20 text-brand-500 rounded-lg border border-brand-500/30">
+                    <i class="fa-solid fa-file-contract text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg text-white leading-tight">Gestão Fiscal & e-CAC</h1>
+                    <p class="text-xs text-slate-400">Controle Unificado de Procurações e Relatórios</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="exportToPythonScript()" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors">
+                    <i class="fa-brands fa-python mr-2"></i> Exportar p/ Python
+                </button>
+                <button onclick="exportCSV()" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 hover:bg-blue-600/30 transition-colors">
+                    <i class="fa-solid fa-file-csv mr-2"></i> Exportar CSV
+                </button>
+                <button onclick="window.print()" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-700 text-slate-200 border border-slate-600 hover:bg-slate-600 transition-colors">
+                    <i class="fa-solid fa-print mr-2"></i> Imprimir/PDF
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        
+        <!-- KPI Dashboard Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Card 1: Total -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between shadow-lg">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Carteira</p>
+                    <p class="text-2xl font-bold text-white mt-1" id="kpi-total">112</p>
+                    <p class="text-xs text-slate-500 mt-1">Empresas Cadastradas</p>
+                </div>
+                <div class="p-3 bg-slate-700/50 text-slate-300 rounded-xl">
+                    <i class="fa-solid fa-building text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- Card 2: Procurações Ativas -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between shadow-lg">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Procurações Ativas</p>
+                    <p class="text-2xl font-bold text-emerald-400 mt-1" id="kpi-ativas">0</p>
+                    <p class="text-xs text-slate-500 mt-1" id="kpi-ativas-pct">0% da carteira</p>
+                </div>
+                <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                    <i class="fa-solid fa-shield-check text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- Card 3: Pendências Fiscais -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between shadow-lg">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Com Pendências</p>
+                    <p class="text-2xl font-bold text-amber-400 mt-1" id="kpi-pendencias">0</p>
+                    <p class="text-xs text-slate-500 mt-1">Requerem Atenção</p>
+                </div>
+                <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                    <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                </div>
+            </div>
+
+            <!-- Card 4: Relatórios Baixados -->
+            <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 flex items-center justify-between shadow-lg">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">PDFs Baixados</p>
+                    <p class="text-2xl font-bold text-brand-400 mt-1" id="kpi-baixados">0</p>
+                    <p class="text-xs text-slate-500 mt-1" id="kpi-baixados-pct">0% concluído</p>
+                </div>
+                <div class="p-3 bg-brand-500/10 text-brand-400 rounded-xl border border-brand-500/20">
+                    <i class="fa-solid fa-file-pdf text-2xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls & Filters Section -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4 space-y-4 shadow-lg">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <!-- Search Input -->
+                <div class="md:col-span-4 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                    </div>
+                    <input type="text" id="search-input" onkeyup="filterData()" placeholder="Buscar por Razão Social ou CNPJ..." 
+                        class="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+                </div>
+
+                <!-- Filter Procuração -->
+                <div class="md:col-span-3">
+                    <select id="filter-procuracao" onchange="filterData()" class="w-full py-2 px-3 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="todos">Proc. e-CAC: Todos os Status</option>
+                        <option value="Ativa">Ativa</option>
+                        <option value="Vencendo">Vencendo em breve</option>
+                        <option value="Expirada">Expirada</option>
+                        <option value="Sem Procuração">Sem Procuração</option>
+                    </select>
+                </div>
+
+                <!-- Filter Fiscal -->
+                <div class="md:col-span-3">
+                    <select id="filter-fiscal" onchange="filterData()" class="w-full py-2 px-3 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="todos">Situação Fiscal: Todos os Status</option>
+                        <option value="Sem Pendências">Sem Pendências</option>
+                        <option value="Com Pendências">Com Pendências</option>
+                        <option value="Pendente de Processamento">Pendente de Processamento</option>
+                    </select>
+                </div>
+
+                <!-- Filter Relatório Baixado -->
+                <div class="md:col-span-2">
+                    <select id="filter-relatorio" onchange="filterData()" class="w-full py-2 px-3 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="todos">PDF: Todos</option>
+                        <option value="baixado">PDF Baixado</option>
+                        <option value="pendente">PDF Pendente</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table Container -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden shadow-xl">
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-900/80 text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-slate-700/60">
+                            <th class="py-3 px-4 w-12 text-center">PDF</th>
+                            <th class="py-3 px-4">Razão Social / CNPJ</th>
+                            <th class="py-3 px-4">Procuração e-CAC</th>
+                            <th class="py-3 px-4">Situação Fiscal</th>
+                            <th class="py-3 px-4 min-w-[200px]">Observações / Anotações</th>
+                            <th class="py-3 px-4 w-28 text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-slate-700/40 text-sm text-slate-300">
+                        <!-- Renderizado via Javascript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Table Footer Status -->
+            <div class="p-4 bg-slate-900/60 border-t border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
+                <span id="showing-count">Mostrando 112 de 112 clientes</span>
+                <span>Dados armazenados localmente no navegador</span>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal de Exportação Python -->
+    <div id="modal-python" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl max-w-3xl w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <h3 class="font-bold text-white text-lg flex items-center gap-2">
+                    <i class="fa-brands fa-python text-emerald-400"></i> Código da Carteira para Python (`automa_ecac.py`)
+                </h3>
+                <button onclick="closeModal('modal-python')" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-400">Copie o trecho abaixo e cole no seu arquivo Python para rodar a automação apenas para a seleção atual de clientes:</p>
+            <div class="relative">
+                <textarea id="python-code-box" readonly class="w-full h-64 bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-xs text-emerald-400 custom-scrollbar focus:outline-none"></textarea>
+                <button onclick="copyPythonCode()" class="absolute top-3 right-3 px-3 py-1.5 bg-slate-700 text-slate-200 text-xs rounded border border-slate-600 hover:bg-slate-600">
+                    <i class="fa-solid fa-copy mr-1"></i> Copiar Código
+                </button>
+            </div>
+            <div class="flex justify-end">
+                <button onclick="closeModal('modal-python')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Lista oficial contendo as 112 Empresas do Escritório
+        const initialClientsData = [
+            {"nome": "A M PINTURAS E REFORMAS DE IMOVEIS LTDA", "cnpj": "05209751000136", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "AFONSO E HERRERA MED", "cnpj": "59214714000145", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "CMR - ESTUDIO CRIATIVO LTDA ME", "cnpj": "10855219000126", "procuracao": "Ativa", "fiscal": "Com Pendências", "baixado": true, "obs": "Pendência de DCTFWeb"},
+            {"nome": "LEILIANE COSTA SERVIÇOS TERAPEUTICOS", "cnpj": "48481192000121", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ELIZIA C. P. DE S. DE SOUSA", "cnpj": "53363659000179", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "MAIS ESTETICA LTDA", "cnpj": "53861304000100", "procuracao": "Ativa", "fiscal": "Com Pendências", "baixado": false, "obs": "Parcelamento em atraso"},
+            {"nome": "GB STUDIO DA BELEZA E COSMETICOS LTDA", "cnpj": "28895794000118", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "EVELLYN PAULA PEREIRA", "cnpj": "66191533000106", "procuracao": "Vencendo", "fiscal": "Pendente de Processamento", "baixado": false, "obs": "Renovar proc. até final do mês"},
+            {"nome": "DELACROY SOLUCOES E SERVICOS EM TECNOLOGIA", "cnpj": "64120183000161", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "GUSTAVO RIBEIRO DE OLIVEIRA CANDIDO", "cnpj": "62651857000129", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "LUYSA THOME LUCIANO DA COSTA", "cnpj": "62590000000146", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "BRUNA MAGALHAES PSICOLOGIA LTDA", "cnpj": "59545840000182", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ANTONIO JALDO NASCIMENTO SANTOS LTDA", "cnpj": "61942540000189", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "VSA FLORESCER LTDA", "cnpj": "63701480000138", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ESPACO CASA INTEGRAR LTDA", "cnpj": "55616008000179", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "PAO LA DE CASA LTDA", "cnpj": "47978616000103", "procuracao": "Expirada", "fiscal": "Com Pendências", "baixado": false, "obs": "Aguardando cliente assinar nova procuração"},
+            {"nome": "SAMUEL MONTEIRO PSICOLOGIA LTDA", "cnpj": "56391124000108", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ITRUST BRASIL SISTEMAS DE SEGURANCA LTDA", "cnpj": "58174526000178", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "FC PRIVATE SOLUTIONS LTDA", "cnpj": "48450212000105", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "INSTITUTO PULSIONAL DE PSICOTERAPIA LTDA", "cnpj": "53523300000111", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "MINI BSB COMERCIO DE PRODUTOS INFANTIS LTDA", "cnpj": "43803656000155", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "CAP ALUGUEL DE MAQUINAS PARA CONSTRUCAO LTDA", "cnpj": "22011474000171", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "REBECKA ASSUNÇÃO SERVIÇOS", "cnpj": "48492435000127", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "LUTTIENNY DOURO TERAPIA E REABILITACAO", "cnpj": "48929340000128", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "SOARES ABREU CLINICA DE PSICOLOGIA LTDA", "cnpj": "48712642000140", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "LAUS IT SERVICES LTDA", "cnpj": "50852606000123", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "BA GESTAO ADMINISTRATIVA LTDA", "cnpj": "48597251000121", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "AMANDA DE CASTRO DERMATOLOGIA LTDA", "cnpj": "50357312000125", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "PCS TI SOLUCOES LTDA", "cnpj": "52722288000101", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ORQUIDEA CENTRO DE ESTETICA E SERVICOS", "cnpj": "14354141000117", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "SAMARA COUTRIM PSICOLOGIA LTDA", "cnpj": "56688650000126", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "RBS TECNOLOGIA LTDA", "cnpj": "57011758000142", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "GOIS PARAFUSOS FERRAGENS E", "cnpj": "49618281000130", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "SOLU COMERCIO DE AUDIO E VIDEO E", "cnpj": "57878566000138", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "CLINICA ELABORE LTDA", "cnpj": "59586319000193", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "LM MARKETING LTDA", "cnpj": "59614887000150", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "MONTEZUMA ESTETICA LTDA", "cnpj": "59807212000128", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "VIVIAN BRANDAO GESTAO E ADMINISTRACAO", "cnpj": "61190940000185", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ROCHA TECNOLOGIA E CONSULTORIA LTDA", "cnpj": "61258982000100", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ANDRE CIRIACO PSICOLOGIA LTDA", "cnpj": "43425418000153", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "SOLOPRIME GEOTECNIA LTDA", "cnpj": "60431995000177", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "JW SERVICOS E MANUTENCAO LTDA", "cnpj": "19858418000162", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "KAROLINE ALVES PSICOLOGIA LTDA", "cnpj": "45296594000168", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "R S OLIVEIRA FONOAUDIOLOGIA LTDA", "cnpj": "52320543000190", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "DA TERRA ALIMENTACAO SAUDAVEL LTDA", "cnpj": "62613640000124", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "GRANN PAO PANIFICADORA E CONFEITARIA LTDA", "cnpj": "19950324000119", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "PLIN TECH SOLUCOES E SERVICOS LTDA", "cnpj": "16841597000137", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "MUNDO DA FALA LTDA", "cnpj": "54272256000187", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "DESENLACE TERAPIAS LTDA", "cnpj": "63416590000158", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "PRIME MULHER NUTRICAO LTDA", "cnpj": "64610260000161", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "COLEGIO NOSSA SENHORA DA PENA LTDA", "cnpj": "27809450000186", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "EMAGRECER COM SAUDE", "cnpj": "65303040000158", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "HOSPEDE-SE JA", "cnpj": "65637915000158", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "CORACAO EM MOVIMENTO LTDA", "cnpj": "65579571000178", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ACUME", "cnpj": "66111983000141", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "NEXUS BIO LTDA", "cnpj": "66329456000108", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "SAMBA UAI LTDA", "cnpj": "66703184000164", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "GR AUTOMOVEIS LTDA", "cnpj": "66758462000180", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "CELLERA CONSULTORIA E GESTAO EM SAUDE EMPRESARIAL LTDA", "cnpj": "59181949000188", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "PRACIANO ODONTOLOGIA", "cnpj": "55739474000141", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "UNIPAPER TISSUE BRASIL LTDA", "cnpj": "59410650000158", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "VITTA SERVICOS MEDICOS LTDA", "cnpj": "64378209000176", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "FONTOCLINICA FONOAUDIOELOGIA E TERAPIA", "cnpj": "54478781000153", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "CENTRO VETERINARIO OLIVEIRA SANTIAGO", "cnpj": "37908828000152", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ESPACO GAMA TERAPIAS", "cnpj": "37415441000164", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "FIRGUN TERAPIAS LTDA", "cnpj": "47665246000146", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "GOIS ESQUADRIAS EM ALUMINIO LTDA", "cnpj": "36833502000140", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "FELT PSICOLOGIA LTDA", "cnpj": "62473253000130", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "CAIO VIANA", "cnpj": "64579195000159", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "PELUGGI CLINICA VETERINARIA LTDA", "cnpj": "64650036000101", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "LEGACY CORRETORA DE SEGUROS LTDA", "cnpj": "46040707000122", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "MR FRUTAS E VERDURAS LTDA", "cnpj": "48016726000149", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "NUDO TECNOLOGIA", "cnpj": "31840112000184", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "JC PETS LTDA", "cnpj": "48400184000103", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "GOLDEN PISOS ESPECIAIS E REVESTIMENTOS INDUSTRIAIS LTDA", "cnpj": "65217557000124", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "RECAT COMUNICACAO LTDA", "cnpj": "54089298000187", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "FELIPE CALAZANS DE OLIVEIRA", "cnpj": "53640554000110", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "DLJ ASSESSORIA E REPRESENTACOES LTDA", "cnpj": "65070845000107", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "RFS COMERCIO DE ALIMENTOS LTDA", "cnpj": "26248894000127", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "SALUTE MAQUINAS LTDA", "cnpj": "43521171000179", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ALENCAR PSICOLOGIA LTDA", "cnpj": "55805616000121", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "REIS E FERNANDES PARTICIPACOES LTDA (HOLDING)", "cnpj": "51352549000186", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "4LEADS LTDA", "cnpj": "60947126000108", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "GUIA TUR AGENCIA DE VIAGENS E TURISMO", "cnpj": "23468636000168", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "NOBRE INFRAESTRUTURA", "cnpj": "64014110000195", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "EDITORA IPUEIRA LTDA", "cnpj": "66689847000133", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "VBB ESCOVARIA INTELIGENTE ASA NORTE LTDA", "cnpj": "67246974000120", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "AGAPE CENTRO DE DESENVOLVIMENTO PESSOAL INTEGRAL LTDA", "cnpj": "09564807000121", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "RUFINO & REBUA LTDA", "cnpj": "66907721000198", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "LAIS OTAVIANO SERVICOS FARMACEUTICOS LTDA", "cnpj": "68147742000188", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "GENESIS CULTIVO E COMERCIO DE FLORES", "cnpj": "22800964000157", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "ALFP SERVICOS DE CONSULTORIA LTDA", "cnpj": "40626743000196", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "EXPH SOLUCOES LTDA", "cnpj": "50925179000166", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "MASTHER COFFEE LTDA", "cnpj": "50064879000103", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "PANIFICADORA E CONFEITARIA 325 LTDA", "cnpj": "57802123000163", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "CONTA10 GESTAO FINANCEIRA LTDA", "cnpj": "59824166000175", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "FABIANA DE SOUSA CARDOSO", "cnpj": "62191402000178", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "TCS PARTICIPACOES SOCIETARIAS LTDA (HOLDING)", "cnpj": "72592322000188", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "CLINICA VITALIZE", "cnpj": "57387017000160", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "JESSICA AFONSO FERREIRA DOS SANTOS", "cnpj": "62543100000111", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "TERRA BASE SERVICO DE TERRA PLANEJE E", "cnpj": "62988166000115", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "S.P.T SERVICOS DE SOFTWARES LTDA", "cnpj": "63732749000143", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "LORENA THESSA GINECOLOGIA LTDA", "cnpj": "66199665000184", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "BRENO LUIS PITANGUI DO PRADO FARIA", "cnpj": "16669333000148", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "AM APOIO ADMINISTRATIVO E TREINAMENTOS LTDA", "cnpj": "67116670000149", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "AR AUTOMOVEL LTDA", "cnpj": "97520018000156", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "M. MARTA GOMES DA CUNHA", "cnpj": "64711797000118", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "BARBARA FERNANDES CONSULTORIA COMERCIAL LTDA", "cnpj": "68287472000100", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "DHULLY MERENCIO DA SILVA LTDA", "cnpj": "57878868000152", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "SEBASTIAO GILBERTO MOTA TAVARES JUNIOR", "cnpj": "55388988000108", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "PREMIUM GASTRO BEER LTDA", "cnpj": "69032489000180", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""},
+            {"nome": "NIPS - NUCLEO INTEGRADO DE PSICOLOGIA E SAUDE LTDA", "cnpj": "69104200000190", "procuracao": "Ativa", "fiscal": "Sem Pendências", "baixado": false, "obs": ""}
+        ];
+
+        // Estado da aplicação
+        let clients = [];
+        let filteredClients = [];
+
+        // Inicialização
+        window.onload = function() {
+            // Carrega do localStorage se existir, senão usa os dados padrão
+            const savedData = localStorage.getItem('ecac_clients_db');
+            if (savedData) {
+                try {
+                    clients = JSON.parse(savedData);
+                } catch(e) {
+                    clients = initialClientsData;
+                }
+            } else {
+                clients = initialClientsData;
+            }
+
+            filteredClients = [...clients];
+            renderTable();
+            updateKPIs();
+        };
+
+        function saveData() {
+            localStorage.setItem('ecac_clients_db', JSON.stringify(clients));
+            updateKPIs();
+        }
+
+        // Formatação de CNPJ em tempo real
+        function formatCNPJ(cnpj) {
+            cnpj = cnpj.replace(/\D/g, '');
+            if (cnpj.length !== 14) return cnpj;
+            return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            if (filteredClients.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-8 text-slate-500">
+                            <i class="fa-solid fa-folder-open text-3xl mb-2"></i>
+                            <p>Nenhum cliente encontrado com os filtros selecionados.</p>
+                        </td>
+                    </tr>`;
+                document.getElementById('showing-count').innerText = `Mostrando 0 de ${clients.length} clientes`;
+                return;
+            }
+
+            filteredClients.forEach((client, index) => {
+                const globalIndex = clients.findIndex(c => c.cnpj === client.cnpj);
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-800/40 transition-colors';
+
+                // Badges de Procuração
+                let procBadge = '';
+                if (client.procuracao === 'Ativa') {
+                    procBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i class="fa-solid fa-circle-check mr-1.5 text-[10px]"></i>Ativa</span>`;
+                } else if (client.procuracao === 'Vencendo') {
+                    procBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20"><i class="fa-solid fa-clock mr-1.5 text-[10px]"></i>Vencendo</span>`;
+                } else if (client.procuracao === 'Expirada') {
+                    procBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20"><i class="fa-solid fa-circle-xmark mr-1.5 text-[10px]"></i>Expirada</span>`;
+                } else {
+                    procBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-300"><i class="fa-solid fa-minus mr-1.5 text-[10px]"></i>Sem Proc.</span>`;
+                }
+
+                // Badges de Situação Fiscal
+                let fiscalBadge = '';
+                if (client.fiscal === 'Sem Pendências') {
+                    fiscalBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i class="fa-solid fa-shield-check mr-1.5 text-[10px]"></i>Regular</span>`;
+                } else if (client.fiscal === 'Com Pendências') {
+                    fiscalBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20"><i class="fa-solid fa-triangle-exclamation mr-1.5 text-[10px]"></i>Pendências</span>`;
+                } else {
+                    fiscalBadge = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-700 text-slate-300"><i class="fa-solid fa-spinner fa-spin mr-1.5 text-[10px]"></i>Pendente</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 text-center">
+                        <input type="checkbox" ${client.baixado ? 'checked' : ''} onchange="toggleBaixado(${globalIndex})" 
+                            class="w-4 h-4 text-brand-500 bg-slate-900 border-slate-700 rounded focus:ring-brand-500 focus:ring-offset-slate-900">
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="font-semibold text-slate-100">${client.nome}</div>
+                        <div class="text-xs text-slate-400 font-mono mt-0.5">${formatCNPJ(client.cnpj)}</div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <select onchange="updateProcuracao(${globalIndex}, this.value)" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            <option value="Ativa" ${client.procuracao === 'Ativa' ? 'selected' : ''}>Ativa</option>
+                            <option value="Vencendo" ${client.procuracao === 'Vencendo' ? 'selected' : ''}>Vencendo</option>
+                            <option value="Expirada" ${client.procuracao === 'Expirada' ? 'selected' : ''}>Expirada</option>
+                            <option value="Sem Procuração" ${client.procuracao === 'Sem Procuração' ? 'selected' : ''}>Sem Procuração</option>
+                        </select>
+                    </td>
+                    <td class="py-3 px-4">
+                        <select onchange="updateFiscal(${globalIndex}, this.value)" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            <option value="Sem Pendências" ${client.fiscal === 'Sem Pendências' ? 'selected' : ''}>Sem Pendências</option>
+                            <option value="Com Pendências" ${client.fiscal === 'Com Pendências' ? 'selected' : ''}>Com Pendências</option>
+                            <option value="Pendente de Processamento" ${client.fiscal === 'Pendente de Processamento' ? 'selected' : ''}>Pendente</option>
+                        </select>
+                    </td>
+                    <td class="py-3 px-4">
+                        <input type="text" value="${client.obs || ''}" placeholder="Adicionar nota..." onchange="updateObs(${globalIndex}, this.value)"
+                            class="w-full bg-slate-900/60 border border-slate-700/80 rounded px-2.5 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                    </td>
+                    <td class="py-3 px-4 text-center space-x-1">
+                        <button onclick="copySingleCNPJ('${client.cnpj}')" title="Copiar CNPJ" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors">
+                            <i class="fa-solid fa-copy text-xs"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('showing-count').innerText = `Mostrando ${filteredClients.length} de ${clients.length} clientes`;
+        }
+
+        function updateKPIs() {
+            const total = clients.length;
+            const ativas = clients.filter(c => c.procuracao === 'Ativa').length;
+            const pendencias = clients.filter(c => c.fiscal === 'Com Pendências').length;
+            const baixados = clients.filter(c => c.baixado).length;
+
+            document.getElementById('kpi-total').innerText = total;
+            document.getElementById('kpi-ativas').innerText = ativas;
+            document.getElementById('kpi-ativas-pct').innerText = total > 0 ? `${Math.round((ativas/total)*100)}% da carteira` : '0%';
+
+            document.getElementById('kpi-pendencias').innerText = pendencias;
+
+            document.getElementById('kpi-baixados').innerText = baixados;
+            document.getElementById('kpi-baixados-pct').innerText = total > 0 ? `${Math.round((baixados/total)*100)}% concluído` : '0%';
+        }
+
+        function filterData() {
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const filterProc = document.getElementById('filter-procuracao').value;
+            const filterFisc = document.getElementById('filter-fiscal').value;
+            const filterRel = document.getElementById('filter-relatorio').value;
+
+            filteredClients = clients.filter(c => {
+                const matchSearch = c.nome.toLowerCase().includes(search) || c.cnpj.includes(search);
+                const matchProc = filterProc === 'todos' || c.procuracao === filterProc;
+                const matchFisc = filterFisc === 'todos' || c.fiscal === filterFisc;
+                
+                let matchRel = true;
+                if (filterRel === 'baixado') matchRel = c.baixado === true;
+                if (filterRel === 'pendente') matchRel = c.baixado === false;
+
+                return matchSearch && matchProc && matchFisc && matchRel;
+            });
+
+            renderTable();
+        }
+
+        function toggleBaixado(index) {
+            clients[index].baixado = !clients[index].baixado;
+            saveData();
+            filterData();
+        }
+
+        function updateProcuracao(index, val) {
+            clients[index].procuracao = val;
+            saveData();
+            filterData();
+        }
+
+        function updateFiscal(index, val) {
+            clients[index].fiscal = val;
+            saveData();
+            filterData();
+        }
+
+        function updateObs(index, val) {
+            clients[index].obs = val;
+            saveData();
+        }
+
+        function copySingleCNPJ(cnpj) {
+            navigator.clipboard.writeText(cnpj);
+            alert('CNPJ copiado: ' + cnpj);
+        }
+
+        function exportCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,Razao Social;CNPJ;Procuracao e-CAC;Situacao Fiscal;PDF Baixado;Observacoes\n";
+            
+            filteredClients.forEach(c => {
+                const row = [
+                    `"${c.nome}"`,
+                    `"${c.cnpj}"`,
+                    `"${c.procuracao}"`,
+                    `"${c.fiscal}"`,
+                    `"${c.baixado ? 'Sim' : 'Nao'}"`,
+                    `"${c.obs || ''}"`
+                ].join(";");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Relatorio_eCAC_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportToPythonScript() {
+            const listFormatted = filteredClients.map(c => `    {"nome": "${c.nome}", "cnpj": "${c.cnpj}"}`).join(",\n");
+            const pythonCode = `CARTEIRA_CLIENTES = [\n${listFormatted}\n]`;
+            
+            document.getElementById('python-code-box').value = pythonCode;
+            document.getElementById('modal-python').classList.remove('hidden');
+        }
+
+        function copyPythonCode() {
+            const codeBox = document.getElementById('python-code-box');
+            codeBox.select();
+            document.execCommand('copy');
+            alert('Código Python copiado para a área de transferência!');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
